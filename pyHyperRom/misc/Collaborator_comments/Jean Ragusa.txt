@@ -1,0 +1,10 @@
+---
+Code optimization suggestion
+---
+Wed_11_Oct_23_04:13_PM
+
+## utils.py : 
+
+1. line: 116-117 use connectivity matrix instead of using meshgrid multiple times.
+
+2. Avoid array manipulations 124
