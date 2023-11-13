@@ -1,5 +1,6 @@
 from ..utils.fem_utils import *
 from ..basic import *
+from ..utils.rom_utils import train_test_split
 import time 
 
 class probdata:
@@ -382,6 +383,8 @@ class HeatConductionSimulationData:
         self.K_mus = []
         self.q_mus = []
         self.T_init_guess = T_init_guess
+        self.train_mask, self.test_mask = train_test_split(num_snapshots)
+
 
     def run_simulation(self):
         

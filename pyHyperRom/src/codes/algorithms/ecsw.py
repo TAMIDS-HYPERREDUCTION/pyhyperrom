@@ -63,8 +63,8 @@ def ecsw_red(d, V_sel, Le, K_mus, q_mus, n_sel, N_snap, mask, NL_solutions, tol=
 
     # Compute d_vec as C times a vector of ones
     d_vec = C @ np.ones((ncells, 1))
-
-    print(f"norm of rhs: {np.linalg.norm(d_vec)}")
+    norm_d_vec = np.linalg.norm(d_vec)
+    print(f"norm of rhs: {norm_d_vec}")
 
     # Solve the non-negative least squares problem
     if tol is not None:
@@ -72,4 +72,4 @@ def ecsw_red(d, V_sel, Le, K_mus, q_mus, n_sel, N_snap, mask, NL_solutions, tol=
     else:
         x, residual = nnls(C, d_vec.flatten(), maxiter=1e6)
     
-    return x, residual
+    return x, residual/norm_d_vec

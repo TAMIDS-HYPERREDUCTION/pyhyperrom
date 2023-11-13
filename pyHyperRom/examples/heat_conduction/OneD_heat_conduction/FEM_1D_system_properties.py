@@ -50,7 +50,7 @@ class SystemProperties:
         # External heat source properties
         qext_list = [
             lambda T, mu: 35000.0 +0.0*T,
-            lambda T, mu: 0.0*T
+            lambda T, mu: 5000.0 +0.0*T
         ]
         fdict["qext"] = qext_list
 

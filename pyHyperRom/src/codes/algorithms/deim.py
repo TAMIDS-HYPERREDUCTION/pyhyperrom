@@ -12,7 +12,7 @@ class deim:
         self.sol_snapshots=sol_snapshots
         self.V_m=V[mask]
         self.mu_list = param_list
-        self.F_nl=F_nl
+        self.F_nl=F_nl[train_mask]
         self.extra_modes = extra_modes
 
     def select_elems(self):
