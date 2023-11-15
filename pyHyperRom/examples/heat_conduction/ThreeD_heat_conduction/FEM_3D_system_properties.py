@@ -1,7 +1,6 @@
 # Restart the kernel
 import os
 import sys
-
 # Adjust the file path as necessary to navigate to the desired directory
 desired_path = os.path.join(os.path.dirname(__file__), '..', '..', '..')
 os.chdir(desired_path)
