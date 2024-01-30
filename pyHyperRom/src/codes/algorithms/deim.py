@@ -1,5 +1,5 @@
 import numpy as np
-from src.codes.utils.fem_utils import *
+from src.codes.utils.fem_utils_HC import *
 from ..utils.rom_utils import *
 
 class deim:
@@ -10,7 +10,7 @@ class deim:
         self.tol_f=tol_f
         self.mask=mask
         self.sol_snapshots=sol_snapshots
-        self.V_m=V[mask]
+        self.V_m=V#[mask]
         self.mu_list = param_list
         self.F_nl=F_nl[train_mask]
         self.extra_modes = extra_modes

@@ -1,0 +1,97 @@
+# Custom Matplotlib Style Sheet (custom_style.mplstyle)
+
+## Font properties
+font.size : 12              # General font size
+axes.labelsize : 12         # Font size for axis labels
+axes.titlesize : 12         # Font size for axis titles
+legend.fontsize : 12        # Font size for legend
+xtick.labelsize : 12        # Font size for x-axis tick labels
+ytick.labelsize : 12        # Font size for y-axis tick labels
+
+
+## Use LaTeX for math formatting
+# text.usetex : True
+# text.latex.preamble : \usepackage{amsmath} \usepackage{amssymb} #\usepackage{sfmath}
+
+# Set fonts to be LaTeX defaults when you don't have latex installed
+text.usetex : False
+font.serif : cmr10, Computer Modern Serif, DejaVu Serif
+font.family : serif #STIXGeneral
+axes.formatter.use_mathtext : True
+mathtext.fontset : cm
+
+
+## Figure properties
+figure.edgecolor : black
+figure.facecolor : white
+figure.dpi : 100
+
+
+## Axes properties
+axes.facecolor : [0.95,0.95,0.95]
+axes.linewidth : 0.5
+axes.spines.right : False
+axes.spines.top : False
+axes.xmargin : 0.01  # 1% margin on the x-axis
+axes.ymargin : 0.01  # 1% margin on the y-axis
+
+
+## Default: color-blind and photocopy friendly but only three-lines
+axes.prop_cycle : cycler('color', ['e66101','5e3c99','fdb863'])
+
+## Only Scatter plot
+# axes.prop_cycle : (cycler('marker', ['o', 's', '^', 'v', '<', '>', 'd']) +  cycler('ls', [' ', ' ', ' ', ' ', ' ', ' ', ' ']))
+
+## Line properties
+lines.linewidth : 1.5
+lines.markersize : 6
+
+## Legend properties
+legend.frameon : True
+legend.fancybox : True
+legend.edgecolor : 0.9
+legend.framealpha : 0.0
+legend.numpoints : 1
+
+
+## Grid properties
+axes.grid : True
+grid.color : [1,1,1]
+grid.linewidth : 1.0
+grid.alpha : 1.0
+#grid.linestyle : --
+axes.axisbelow : True
+
+
+## Tick properties (X-axis)
+xtick.alignment : center
+xtick.color : black
+xtick.direction : out
+xtick.minor.top : False
+xtick.minor.bottom : False
+xtick.minor.visible : True
+xtick.minor.size : 3.0
+xtick.minor.width : 0.75
+xtick.major.bottom : True
+xtick.major.size : 6.0
+xtick.major.top : False
+xtick.major.width : 0.5
+
+## Tick properties (Y-axis)
+ytick.alignment : center_baseline
+ytick.color : black
+ytick.direction : out
+ytick.labelleft : True
+ytick.major.left : True
+ytick.major.pad : 3.5
+ytick.major.size : 6.0
+ytick.major.width : 0.95
+ytick.minor.left : False
+ytick.minor.pad : 3.4
+ytick.minor.size : 3.0
+ytick.minor.visible : True
+ytick.minor.width : 0.5
+
+## Always save as 'tight'
+savefig.bbox : tight
+savefig.pad_inches : 0.01

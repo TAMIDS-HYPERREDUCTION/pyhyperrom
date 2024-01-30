@@ -31,7 +31,8 @@ def ecsw_red(d, V_sel, Le, K_mus, q_mus, n_sel, N_snap, mask, NL_solutions, tol=
     C = np.zeros((n_sel * N_snap, int(ncells)))
 
     # Apply mask to the selected basis vectors
-    V_mask_ = V_sel[mask, :]
+    V_mask_ = V_sel
+    # [mask, :]
     
     # Compute the projection matrix P_sel
     P_sel = V_sel @ V_sel.T
@@ -40,10 +41,14 @@ def ecsw_red(d, V_sel, Le, K_mus, q_mus, n_sel, N_snap, mask, NL_solutions, tol=
     for i in range(N_snap):
              
         # Project the solution onto the selected basis
-        projected_sol = np.dot(P_sel, NL_solutions[i])
+
+        # projected_sol = np.dot(P_sel, NL_solutions[i])
+        projected_sol_mask = np.dot(P_sel, NL_solutions[i])
+
         
         # Mask and reshape the nonlinear solutions for the current snapshot
-        projected_sol_mask = projected_sol[mask]
+        # projected_sol_mask = projected_sol[mask]
+
 
         # Loop over all cells in the mesh
         for j in range(ncells):

@@ -30,11 +30,11 @@ class SystemProperties:
         fdict = {}
         
         cond_list = []
-        cond_list.append( lambda T,mu: mu*T + 100. + 0.*T )
+        cond_list.append( lambda T,mu: mu*T + 100.0 + 0.0*T )
         fdict["cond"] = cond_list
         
         dcond_list = []
-        dcond_list.append( lambda T,mu: mu + 0. + 0.*T )
+        dcond_list.append( lambda T,mu: mu + 0.0 + 0.0*T )
         fdict["dcond"] = dcond_list
         
         qext_list = []
