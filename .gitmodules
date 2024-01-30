@@ -1,0 +1,3 @@
+[submodule "pylibROM"]
+	path = pylibROM
+	url = git@github.com:LLNL/pylibROM.git
