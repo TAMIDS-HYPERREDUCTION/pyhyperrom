@@ -46,7 +46,7 @@ class SystemProperties:
         
         cond_list = []
         # cond_list.append( lambda T: 28. + 0.*T )
-        cond_list.append(16.0)
+        cond_list.append(1.0)
         fdict["cond"] = cond_list
         
         # dcond_list = []
@@ -71,7 +71,7 @@ class SystemProperties:
 
     def forcing_fn(self,c_elem, t, A_t, fr, deltas, coords):
         
-    
+
         elem_force = np.zeros(len(t))
 
         Torch_rad = 0.5*1e-4
@@ -92,7 +92,7 @@ class SystemProperties:
             
             
         # say the welding time is smaller than simulation time. 
-        t_welding = 0.005
+        t_welding = 0.003
         mask_t = t>t_welding
         
         elem_force[mask_t] = 0.0

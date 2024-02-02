@@ -5,6 +5,10 @@ import scipy.sparse.linalg as spalg
 import control as ctrl
 from pylab import *
 from scipy.linalg import expm
+from scipy.integrate import solve_ivp
+import nbkode
+from scipy.integrate import ode
+
 
 def handle_boundary_conditions(cls_data, bc):
     """
@@ -378,7 +382,7 @@ def global_F_matrix_t(cls_data, node_eqnId,t, xi_=None):
     cls_data.rhs = rhs
     return rhs_e, rhs
 
-def convert_to_ss(K, M, rhs):
+def convert_to_ss(K, M):
     """
     Converts a second order system to a first order form.
 
@@ -407,9 +411,125 @@ def convert_to_ss(K, M, rhs):
     # Create D_sys matrix (assuming zero matrix for a purely dynamic system)
     #D_sys = np.zeros((C_sys.shape[0], B_sys.shape[1]))
 
-    U = rhs
+    # U = rhs
 
-    return A_sys, B_sys, U
+    return A_sys, B_sys
+
+
+#==================================#
+#=== Continuous system solution ===#
+#==================================#
+
+# def continuous_state_space_solver_ivp(A, B, u_func, x0, t_span, t_eval=None):
+#     """
+#     Solves the continuous state-space equation dx/dt = Ax + Bu using solve_ivp.
+    
+#     Parameters:
+#     A (2D array): State-transition matrix.
+#     B (2D array): Control-input matrix.
+#     u_func (function): Function that returns the control input at any given time.
+#     x0 (1D array): Initial state.
+#     t_span (tuple): Tuple (t0, tf) defining the time interval for the integration.
+#     t_eval (1D array, optional): Time points at which to store the solution. If None, solver chooses points.
+    
+#     Returns:
+#     x (2D array): State over time (each row corresponds to a time step).
+#     """
+
+#     def state_equation(t, x):
+        
+#         if isinstance(t, (float, np.float64)):
+#             t=np.array([t])
+
+#         u = u_func(t)
+#         dxdt = np.dot(A, x) + np.dot(B, u.flatten())
+#         return dxdt
+    
+#     def jacobian(t, x):
+#         J = A
+#         return J
+    
+    
+#     # === Approach - A ===
+
+#     # sol = solve_ivp(state_equation, t_span, x0, t_eval=t_eval, vectorized=True, method='Radau', jac=jacobian, atol=1e-5, rtol=1e-5)
+
+    
+#     # === Approach - B ===
+    
+#     solver = ode(state_equation, jac=jacobian)
+#     # solver.set_integrator('lsoda', with_jacobian=True)  # Using 'vode' with 'bdf'
+#     solver.set_integrator('vode', method='bdf', with_jacobian=True, atol=1e-6, rtol=1e-6)  # Using 'vode' with 'bdf'
+
+#     solver.set_initial_value(x0, 0.0)
+    
+#     sol = np.empty((len(t_eval), len(x0)))
+#     sol[0] = x0.flatten()
+#     k = 1
+    
+#     while solver.successful() and solver.t < t_eval[-1]:
+#         print(k)
+#         solver.integrate(t_eval[k])
+#         sol[k] = solver.y
+#         k += 1
+
+    
+#     # === Approach - C ===
+    
+#     # solutions = []
+#     # solutions.append(x0)
+#     # # Iterate over each time interval
+#     # for i in range(len(t_eval) - 1):
+#     #     print(i)
+#     #     t_span = [t_eval[i], t_eval[i + 1]]
+#     #     solution = solve_ivp(state_equation, t_span, x0, t_eval=[t_eval[i + 1]],vectorized=True, method='Radau', jac=A, rtol = 1e-5)
+#     #     x0 = solution.y[:, -1]  # Update the initial condition for the next interval
+#     #     solutions.append(solution.y[:, -1])  # Store the solution
+#     # sol = np.asarray(solutions)
+    
+#     return sol.T  # Transpose to match the expected output format
+
+
+
+# def solve_fos_dynamics(cls_data, sol_init):
+    
+#     # Handle boundary conditions and get node equation IDs    
+#     node_eqnId = cls_data.node_eqnId
+
+#     # Create a mask for nodes that do not have a Dirichlet boundary condition
+#     mask = node_eqnId != 0
+#     cls_data.mask = mask
+
+#     # Update initial temperature values for Dirichlet boundary nodes
+#     K, M = global_KM_matrices(cls_data, node_eqnId)
+       
+#     dt = cls_data.data.dt
+#     t = cls_data.data.t
+
+#     rhs_e, rhs = global_F_matrix_t(cls_data, node_eqnId, t)
+#     A_sys, B_sys= convert_to_ss(K, M)
+
+#     u_func = lambda t: global_F_matrix_t(cls_data, node_eqnId, t)[1]
+
+#     x0 = sol_init[mask]
+#     x_out = continuous_state_space_solver_ivp(A_sys, B_sys, u_func, x0, (t[0],t[-1]), t_eval=t)
+    
+#     # Create the state-space model
+#     # full_sys = ctrl.ss(A_sys, B_sys)
+#     # t_out, _, x_out = ctrl.forced_response(full_sys, T=t, U=U, X0=x0, return_x=True)
+
+#     x_sol= np.zeros((len(sol_init),len(t)))
+#     x_sol[mask,:] = x_out
+#     x_sol[~mask,:] = sol_init[~mask].reshape(-1,1)
+    
+#     return t, x_sol, rhs_e, cls_data.Ke_d, mask, rhs
+
+
+
+
+#================================#
+#=== Discrete system solution ===#
+#================================#
 
 def discrete_state_space_solver(A, B, u, x0, num_steps):
     """
@@ -433,30 +553,6 @@ def discrete_state_space_solver(A, B, u, x0, num_steps):
 
     return x
 
-def continuous_state_space_solver_ivp(A, B, u_func, x0, t_span, t_eval=None):
-    """
-    Solves the continuous state-space equation dx/dt = Ax + Bu using solve_ivp.
-    
-    Parameters:
-    A (2D array): State-transition matrix.
-    B (2D array): Control-input matrix.
-    u_func (function): Function that returns the control input at any given time.
-    x0 (1D array): Initial state.
-    t_span (tuple): Tuple (t0, tf) defining the time interval for the integration.
-    t_eval (1D array, optional): Time points at which to store the solution. If None, solver chooses points.
-    
-    Returns:
-    x (2D array): State over time (each row corresponds to a time step).
-    """
-
-    def state_equation(t, x):
-        u = u_func(t)
-        dxdt = np.dot(A, x) + np.dot(B, u)
-        return dxdt
-    
-    sol = solve_ivp(state_equation, t_span, x0, t_eval=t_eval, vectorized=True)
-    return sol.y.T  # Transpose to match the expected output format
-
 def continuous_to_discrete(A, B, delta_t):
     """
     Converts continuous-time LTI system matrices A, B to discrete-time.
@@ -477,6 +573,7 @@ def continuous_to_discrete(A, B, delta_t):
     
     return A_d, B_d
 
+
 def solve_fos_dynamics(cls_data, sol_init):
     
     # Handle boundary conditions and get node equation IDs    
@@ -493,10 +590,12 @@ def solve_fos_dynamics(cls_data, sol_init):
     t = cls_data.data.t
 
     rhs_e, rhs = global_F_matrix_t(cls_data, node_eqnId, t)
-    A_sys, B_sys, U = convert_to_ss(K, M, rhs)
+    A_sys, B_sys= convert_to_ss(K, M)
+    U = rhs
 
+    Ad, Bd = continuous_to_discrete(A_sys, B_sys, dt)
     x0 = sol_init[mask]
-    x_out = continuous_state_space_solver_ivp(A, B, u_func, x0, t_span, t_eval=None)
+    x_out = discrete_state_space_solver(Ad, Bd, U, x0, len(t))
     
     # Create the state-space model
     # full_sys = ctrl.ss(A_sys, B_sys)
@@ -507,36 +606,3 @@ def solve_fos_dynamics(cls_data, sol_init):
     x_sol[~mask,:] = sol_init[~mask].reshape(-1,1)
     
     return t, x_sol, rhs_e, cls_data.Ke_d, mask, U
-
-
-# def solve_fos_dynamics_SS(cls_data, sol_init):
-    
-#     # Handle boundary conditions and get node equation IDs    
-#     node_eqnId = cls_data.node_eqnId
-
-#     # Create a mask for nodes that do not have a Dirichlet boundary condition
-#     mask = node_eqnId != 0
-#     cls_data.mask = mask
-
-#     # Update initial temperature values for Dirichlet boundary nodes
-#     K, M = global_KM_matrices(cls_data, node_eqnId)
-       
-#     dt = cls_data.data.dt
-#     t = cls_data.data.t
-
-#     rhs_e, rhs = global_F_matrix_t(cls_data, node_eqnId, t)
-#     A_sys, B_sys, U = convert_to_ss(K, M, rhs)
-
-#     Ad, Bd = continuous_to_discrete(A_sys, B_sys, dt)
-#     x0 = sol_init[mask]
-#     x_out = discrete_state_space_solver(Ad, Bd, U, x0, len(t))
-    
-#     # Create the state-space model
-#     # full_sys = ctrl.ss(A_sys, B_sys)
-#     # t_out, _, x_out = ctrl.forced_response(full_sys, T=t, U=U, X0=x0, return_x=True)
-
-#     x_sol= np.zeros((len(sol_init),len(t)))
-#     x_sol[mask,:] = x_out
-#     x_sol[~mask,:] = sol_init[~mask].reshape(-1,1)
-    
-#     return t, x_sol, rhs_e, cls_data.Ke_d, mask, U

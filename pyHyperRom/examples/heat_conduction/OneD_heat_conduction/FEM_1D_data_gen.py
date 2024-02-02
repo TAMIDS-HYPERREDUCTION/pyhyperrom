@@ -13,7 +13,7 @@ import dill as pickle
 
 #%%
 # Define the reference points and widths
-n_ref = np.array([40 * 2, 10 * 2], dtype=int)
+n_ref = np.array([40 * 8, 10 * 8], dtype=int)
 w = np.array([0.4, 0.1])
 params = np.arange(1., 4.0, 0.01)
 num_snapshots = 100
@@ -28,7 +28,7 @@ simulation.run_simulation()
 #%%
 # Save Data ##
 
-filename_dataC = 'examples\\heat_conduction\\oneD_heat_conduction\\data\\DataClass.dill'   
+filename_dataC = 'examples//heat_conduction//oneD_heat_conduction//data//DataClass.dill'   
 
 with open(filename_dataC, 'wb') as f:
     pickle.dump(simulation, f, recurse=True)

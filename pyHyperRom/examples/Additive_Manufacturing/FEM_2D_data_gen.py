@@ -16,8 +16,8 @@ import dill as pickle
 Torch_dia = 1e-4
 params = 0.25*np.pi*Torch_dia**2  # Torch-area
 feed_rate = 1.0;
-dt = 0.000005;
-tf=0.01;
+dt = 0.00001;
+tf=0.1;
 
 cell_dim = Torch_dia/3
 L = [0.005*1.7, 7*Torch_dia]
@@ -37,7 +37,7 @@ simulation.run_simulation()
 
 #%%
 ## Save Data ##
-filename_dataC = 'pyHyperRom\\examples\\Additive_Manufacturing\\data\\DataClass_AM_M.dill'   
+filename_dataC = 'pyHyperRom\\examples\\Additive_Manufacturing\\data\\DataClass_AM_M_2.dill'   
 
 with open(filename_dataC, 'wb') as f:
     pickle.dump(simulation, f, recurse=True)

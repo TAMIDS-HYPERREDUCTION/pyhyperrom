@@ -69,9 +69,11 @@ def ecsw_red_ms(d, V_sel, Le, K_mus, q_mus, n_sel, N_snap, mask, NL_solutions, N
     print(f"norm of rhs: {norm_d_vec}")
 
     # Solve the non-negative least squares problem
-    if tol is not None:
-        x, residual = nnls_sp(C, d_vec.flatten(), atol=tol, maxiter=1e6)
-    else:
+    if tol is None:
         x, residual = nnls(C, d_vec.flatten(), maxiter=1e6)
+        
+    else:
+        x, residual = nnls_sp(C, d_vec.flatten(), atol=tol, maxiter=1e6)
+
     
     return x, residual/norm_d_vec
