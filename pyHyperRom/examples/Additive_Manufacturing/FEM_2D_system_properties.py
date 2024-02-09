@@ -68,7 +68,6 @@ class SystemProperties:
                
         return fdict
 
-
     def forcing_fn(self,c_elem, t, A_t, fr, deltas, coords):
         
 
