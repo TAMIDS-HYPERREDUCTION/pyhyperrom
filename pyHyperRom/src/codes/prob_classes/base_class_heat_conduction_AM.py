@@ -2,6 +2,7 @@ from ..utils.fem_utils_AM import *
 from ..utils.rom_utils import train_test_split
 from ..basic import *
 import time
+from fractions import Fraction
 
 class probdata:
 
@@ -21,11 +22,11 @@ class probdata:
             repeats = np.asarray(nref, dtype=int)
             self.cell2mat_layout = self.repeat_array(mat_layout, repeats)
             self.cell2src_layout = self.repeat_array(src_layout, repeats)
-	    
+        
         ## change this mapping if needed.
         self.fdict = fdict
 
-	    # mesh data cells
+        # mesh data cells
         self.ncells = [None] * pb_dim
         self.npts = [None] * pb_dim
         self.deltas = [None] * pb_dim
@@ -40,15 +41,13 @@ class probdata:
             else:
                 self.xi.append(np.linspace(0, L[i], self.npts[i]))
                 self.deltas[i] = L[i] / self.ncells[i]
-
         if pb_dim == 1:
-        	self.n_verts = self.npts[0]
+            self.n_verts = self.npts[0]
         else:
-       		self.n_verts = np.prod(np.array(self.npts))
-
-        # Create nodal connectivity for the continuous Finite Element Method (cFEM)
-        self.connectivity()
-
+               self.n_verts = np.prod(np.array(self.npts))
+        
+        self.connectivity() 
+        
         # Store the dirichlet nodes if any
         handle_boundary_conditions(self, bc)
 
@@ -96,9 +95,9 @@ class probdata:
         # Initialize the connectivity array for 1D
         self.n_cells = self.ncells[0]
         self.gn = np.zeros((self.n_cells, 2**self.dim_), dtype=int)
-	    # Loop over all cells to define their nodal connectivity
+        # Loop over all cells to define their nodal connectivity
         for iel in range(self.n_cells):
-	    # For each cell, define the left and right nodes	
+        # For each cell, define the left and right nodes	
             self.gn[iel, 0] = iel
             self.gn[iel, 1] = iel + 1
 
@@ -141,7 +140,6 @@ class probdata:
                     iel += 1
 
 class FOS_FEM:
-
 
     def __init__(self, data, quad_degree, feed_rate, torch_area):
         """
@@ -312,7 +310,7 @@ class FOS_FEM:
                 for j in range(n):
                     # Compute stiffness matrix entry for the current pair of nodes
 
-                    M_temp  = vol*np.dot(self.w*self.bq[:,i], rho*C_v*self.bq[:,j])
+                    # M_temp  = vol*np.dot(self.w*self.bq[:,i], rho*C_v*self.bq[:,j])
 
                     for k_ in range(dim_):
 
@@ -322,9 +320,17 @@ class FOS_FEM:
                         Ke_[i, j] += K_temp
                         # Je_[i, j] += J_temp
 
-                    Me_[i, j] += M_temp
+                    # Me_[i, j] += M_temp
+            
+            
+            Me_ = np.array([[Fraction(4, 9), Fraction(2, 9), Fraction(2, 9), Fraction(1, 9)],
+                    [Fraction(2, 9), Fraction(4, 9), Fraction(1, 9), Fraction(2, 9)],
+                    [Fraction(2, 9), Fraction(1, 9), Fraction(4, 9), Fraction(2, 9)],
+                    [Fraction(1, 9), Fraction(2, 9), Fraction(2, 9), Fraction(4, 9)]]).astype(float)
+            
+            Me_ = vol*rho*C_v*Me_
 
-        return Me_, Ke_ #, Je_,
+        return Ke_, Me_ #, Je_,
 
     def element_F_matrices(self, iel, t=None):
 
@@ -355,6 +361,17 @@ class FOS_FEM:
                 qe_[i, :] += vol * np.dot(self.w, self.bq[:, i])*fext_q
                 
         return qe_
+    
+    def residual_func(self,i,j,p_sol,data):
+
+        # Extract relevant stiffness matrices and source terms for the current snapshot and cell    
+        K_mus = data['K_mus']
+        q_mus = data['q_mus']
+        K_mus_ij = K_mus[0][j]
+        q_mus_ij = np.array(q_mus[0][j][:,i])
+        res = np.dot(K_mus_ij, p_sol) - q_mus_ij
+        
+        return res
 
 class HeatConductionSimulationData:
     
@@ -363,7 +380,7 @@ class HeatConductionSimulationData:
         # Initialize layout instance
         if pb_dim==2:
             # from examples.heat_conduction.TwoD_heat_conduction.FEM_2D_system_properties import SystemProperties
-            from tests.TwoD_heat_conduction_AM.FEM_2D_system_properties import SystemProperties
+            from examples.Additive_Manufacturing.FEM_2D_system_properties import SystemProperties
         else:
             return
             # from examples.heat_conduction.ThreeD_heat_conduction.FEM_3D_system_properties import SystemProperties
@@ -439,15 +456,20 @@ class ROM_simulation:
         self.N_rom_snap = N_rom_snap
         self.sol_init_guess = sol_init_guess
         self.speed_up = []
+        self.mean = f_cls.mean
 
-    def run_simulation(self):
+
+    def run_simulation_ms(self):
 
         import src.codes.reductor.rom_class_AM as rom_class
 
         N_dir = self.V_sel.shape[0]
         N_full = self.d.n_verts
         
-        sol_init_fos = np.zeros(N_dir)+self.sol_init_guess
+        # sol_init_fos = self.mean.flatten() - self.sol_init_guess
+        # sol_init_fos = self.mean.flatten() + self.sol_init_guess
+
+        sol_init_fos = np.zeros(N_dir) + self.sol_init_guess - self.mean.flatten()
         sol_init_rom = np.dot(self.V_sel.T, sol_init_fos)
 
         for i in range(self.N_rom_snap):
@@ -455,14 +477,14 @@ class ROM_simulation:
             
             # n_ref, L, torch_area, feed_rate, dt, t, quad_deg=3, num_snapshots=1, pb_dim=2, T_init_guess = 0.0):
             ROM = rom_class.rom(self.f_cls, self.quad_deg, self.f_cls.FOS.feed_rate, self.f_cls.FOS.torch_area, self.xi)
+            ROM.mean = self.mean
             NL_solution_p_reduced = ROM.solve_rom(sol_init_rom, self.V_sel)
             
             toc_rom = time.time()
             rom_sim_time = toc_rom - tic_rom
 
-            shape_0 = NL_solution_p_reduced.shape[0]
             sol_rom = np.zeros((int(N_full), len(self.t)))
-            sol_rom[self.d.mask] = np.dot(self.V_sel, NL_solution_p_reduced)
+            sol_rom[self.d.mask] = np.dot(self.V_sel, NL_solution_p_reduced) + self.mean
             sol_rom[~self.d.mask] = self.sol_init_guess
             
             self.NL_solutions_rom.append(sol_rom)

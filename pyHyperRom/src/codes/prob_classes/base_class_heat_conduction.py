@@ -348,8 +348,18 @@ class FOS_FEM:
 
                 Je_[i, j]-= qe_temp
 
-
         return Ke_, Je_, qe_
+
+
+    def residual_func(self,i,j,p_sol,data):
+
+        # Extract relevant stiffness matrices and source terms for the current snapshot and cell
+        K_mus = data['K_mus']
+        q_mus = data['q_mus']
+        K_mus_ij = K_mus[i][j]
+        q_mus_ij = np.array(q_mus[i][j])
+        res = np.dot(K_mus_ij, p_sol) - q_mus_ij
+        return res
 
 class HeatConductionSimulationData:
     

@@ -215,6 +215,26 @@ class FOS_FEM:
                 
         return qe_
 
+    def residual_func(self,i,j,p_sol_d,p_sol_v,data):
+
+        # Extract relevant stiffness matrices and source terms for the current snapshot and cell
+                # Project the solution onto the selected basis
+        
+        K_mus = data['K_mus']
+        q_mus = data['q_mus']
+        C_mus = data['C_mus']
+
+        K_mus_ij = K_mus[0][j]
+        C_mus_ij = C_mus[0][j]
+        q_mus_ij = np.array(q_mus[0][j][:,i])
+        
+        res = np.dot(K_mus_ij, p_sol_d) + np.dot(C_mus_ij, p_sol_v) - q_mus_ij
+
+        return res
+    
+
+
+
 class StructuralDynamicsSimulationData:
 
     def __init__(self, n_ref, L, T, params, dt, t, ep=0.02, quad_deg=3, num_snapshots=1, pb_dim=1, cv=1e-2, cm=1e-4):

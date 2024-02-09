@@ -1,89 +1,81 @@
 from src.codes.basic import *
 from src.codes.algorithms.nnls_scipy import nnls as nnls_sp
 from scipy.optimize import nnls
+import numpy as np
+import pylibROM.linalg as linalg
+import pylibROM.utils as utils
+from mpi4py import MPI
 
 def ecsw_red_ms(d, V_sel, Le, K_mus, q_mus, n_sel, N_snap, mask, NL_solutions, NL_solutions_mean, tol=None):
     """
-    Function: ecsw_red
-    Overview: Perform (ECSW) reduction on the nonlinear FEM problems.
+    Executes Enhanced Compressed Snapshot Weighting (ECSW) reduction on nonlinear Finite Element Method (FEM) problems.
     
-    Inputs:
-    - d: Data object containing mesh and FEM details.
-    - V_sel: Selected basis vectors.
-    - Le: Element-node connectivity matrix.
-    - K_mus: List of element stiffness matrices for each snapshot.
-    - q_mus: List of element source terms for each snapshot.
-    - n_sel: Number of selected basis vectors.
-    - N_snap: Number of snapshots.
-    - mask: Boolean mask for nodes without Dirichlet boundary conditions.
-    - NL_solutions: Mean subtracted nonlinear solutions for all snapshots
-    - tol: Tolerance for the non-negative least squares solver (optional).
+    Parameters:
+    - d: Object with mesh and FEM details.
+    - V_sel: Basis vectors selected for reduction.
+    - Le: Connectivity matrix for elements and nodes.
+    - K_mus: Stiffness matrices for each snapshot.
+    - q_mus: Source terms for each snapshot.
+    - n_sel: Count of selected basis vectors.
+    - N_snap: Total number of snapshots.
+    - mask: Boolean array for nodes exempt from Dirichlet boundary conditions.
+    - NL_solutions: Nonlinear solutions for all snapshots, mean adjusted.
+    - NL_solutions_mean: Mean of the nonlinear solutions.
+    - tol: Solver tolerance (optional).
     
-    Outputs:
-    - x: Solution to the least squares problem.
-    - residual: Residual of the least squares problem.
+    Returns:
+    - x: Solution vector for the least squares problem.
+    - residual: Residual of the solution.
     """
     
-    # Initialize the number of cells in the mesh
-    ncells = d.n_cells
-    
-    # Initialize the C matrix with zeros
-    C = np.zeros((n_sel * N_snap, int(ncells)))
+    ncells = d.n_cells  # Number of cells in the mesh
+    C = np.zeros((n_sel * N_snap, int(ncells)))  # Initialize C matrix
 
-    # Apply mask to the selected basis vectors
-    V_mask_ = V_sel
-    
-    # Compute the projection matrix P_sel
-    P_sel = V_sel @ V_sel.T
+    P_sel = V_sel @ V_sel.T  # Projection matrix
 
-    # Loop over all snapshots to populate C matrix
     for i in range(N_snap):
-             
-        # Project the solution onto the selected basis
-
-        # projected_sol = np.dot(P_sel, NL_solutions[i])
         projected_sol_mask = np.dot(P_sel, NL_solutions[i]) + NL_solutions_mean
 
-        # Mask and reshape the nonlinear solutions for the current snapshot
-        # projected_sol_mask = projected_sol[mask]
-
-        # Loop over all cells in the mesh
         for j in range(ncells):
-            
-            # Get the column indices for the current cell in Le
             col_indices = np.argmax(Le[j], axis=1)
-            
-            # Extract relevant stiffness matrices and source terms for the current snapshot and cell
             K_mus_ij = K_mus[i][j]
             q_mus_ij = np.array(q_mus[i][j])
+            Ce = np.dot(np.transpose(V_sel[col_indices]), (np.dot(K_mus_ij, projected_sol_mask[col_indices]) - q_mus_ij))
+            C[i * n_sel: (i + 1) * n_sel, j] = Ce
 
-            # Compute the entries of C matrix for the current cell and snapshot
-            Ce = np.dot( np.transpose(V_mask_[col_indices]), (np.dot(K_mus_ij, projected_sol_mask[col_indices]) - q_mus_ij))
-            
-            # Store the computed values in the C matrix
-            C[i * n_sel : (i + 1) * n_sel, j] = Ce
-
-    # Compute d_vec as C times a vector of ones
     d_vec = C @ np.ones((ncells, 1))
     norm_d_vec = np.linalg.norm(d_vec)
     print(f"norm of rhs: {norm_d_vec}")
 
-    # Solve the non-negative least squares problem
     if tol is None:
         x, residual = nnls(C, d_vec.flatten(), maxiter=1e6)
-        
     else:
-        # x, residual = nnls_sp(C, d_vec.flatten(), atol=tol, maxiter=1e6)
-        import pylibROM.linalg as linalg
+        comm = MPI.COMM_WORLD
+        rank = comm.rank
+        comm.Barrier()
+        
+        local_dim = utils.split_dimension(C.shape[1], comm)
+        nnls_llnl = linalg.NNLSSolver(const_tol=tol)
+        x = linalg.Vector(np.zeros(local_dim), True, True)
+        rhs_lb, rhs_ub = (d_vec.flatten() - 10 * tol), (d_vec.flatten() + 10 * tol)
+        At_lr = linalg.Matrix(C.T.copy(), False, True)
+        At_lr.distribute(local_dim)
+        lb_lr, ub_lr = linalg.Vector(rhs_lb.copy(), False, True), linalg.Vector(rhs_ub.copy(), False, True)
+        nnls_llnl.normalize_constraints(At_lr, lb_lr, ub_lr)
+        nnls_llnl.solve_parallel_with_scalapack(At_lr, lb_lr, ub_lr, x)
 
-        nnls_llnl=linalg.NNLSSolver(const_tol=tol)
-        x=linalg.Vector(np.zeros(C.shape[1]),True,True)  
-        rhs_lb, rhs_ub= (d_vec.flatten()-tol), (d_vec.flatten()+tol)
-        At_lr = linalg.Matrix(C.T.copy(),True,True)
-        lb_lr, ub_lr = linalg.Vector(rhs_lb.copy(),False,True), linalg.Vector(rhs_ub.copy(),False,True)
-        nnls_llnl.normalize_constraints(At_lr,lb_lr,ub_lr)
-        nnls_llnl.solve_parallel_with_scalapack(At_lr,lb_lr, ub_lr,x)
-        x=np.array(x).flatten()
-        residual = np.linalg.norm(np.dot(C,x)-d_vec.flatten())
-    
-    return x, residual/norm_d_vec
+        x_local = np.array(x).flatten()
+        if rank == 0:
+            x_global = np.empty(C.shape[1], dtype=x_local.dtype)
+        else:
+            x_global = None
+
+        comm.Gather(x_local, x_global, root=0)
+
+        if rank == 0:
+            residual = np.linalg.norm(np.dot(C, x_global) - d_vec.flatten())
+            MPI.Finalize()
+            return x_global, residual / norm_d_vec, rank
+        else:
+            MPI.Finalize()
+            return None, None, None

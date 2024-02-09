@@ -46,7 +46,7 @@ class SystemProperties:
         
         cond_list = []
         # cond_list.append( lambda T: 28. + 0.*T )
-        cond_list.append(1.0)
+        cond_list.append(16.0)
         fdict["cond"] = cond_list
         
         # dcond_list = []

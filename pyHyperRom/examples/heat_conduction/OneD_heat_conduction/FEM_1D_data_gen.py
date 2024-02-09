@@ -13,7 +13,7 @@ import dill as pickle
 
 #%%
 # Define the reference points and widths
-n_ref = np.array([40 * 8, 10 * 8], dtype=int)
+n_ref = np.array([40 * 5, 10 * 5], dtype=int)
 w = np.array([0.4, 0.1])
 params = np.arange(1., 4.0, 0.01)
 num_snapshots = 100
