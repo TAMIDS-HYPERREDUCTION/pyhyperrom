@@ -24,7 +24,7 @@ def solve_rom_dynamics(rom_cls, sol_init, V_, xi=None):
     _, rhs = global_F_matrix_t(rom_cls, node_eqnId, t, xi)
     U_rom = V_.T@rhs
     
-    A_rom, B_rom, U_rom = convert_to_ss(sparse.csr_matrix(K_r), sparse.csr_matrix(M_r))
+    A_rom, B_rom = convert_to_ss(sparse.csr_matrix(K_r), sparse.csr_matrix(M_r))
 
     if rom_cls.mean is not None:
         mean_mat = (V_.T@ K@rom_cls.mean.flatten()).reshape(-1,1)
