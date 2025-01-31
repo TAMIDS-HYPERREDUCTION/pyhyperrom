@@ -3,7 +3,7 @@ import random
 import time
 import matplotlib.pyplot as plt
 from src.codes.utils.plot_utils import OneDPlot as plot
-from src.codes.prob_classes.base_class_heat_conduction import probdata, FOS_FEM
+from codes.prob_classes.heat_conduction.base_class_heat_conduction import probdata, FOS_FEM
 
 
 class ROM_simulation:

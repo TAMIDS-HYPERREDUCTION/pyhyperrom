@@ -1,4 +1,4 @@
-from src.codes.prob_classes.base_class_heat_conduction_AM import FOS_FEM
+from codes.prob_classes.heat_conduction.base_class_heat_conduction_AM import FOS_FEM
 from src.codes.utils.fem_utils_AM import *
 from src.codes.utils.rom_utils import *
 from src.codes.basic import *
@@ -13,22 +13,22 @@ def solve_rom_dynamics(rom_cls, sol_init, V_, xi=None):
     mask = node_eqnId != 0
 
     # Update initial temperature values for Dirichlet boundary nodes
-    K,M = global_KM_matrices(rom_cls, node_eqnId, xi)
+    K, M = global_KM_matrices(rom_cls, node_eqnId, xi)
 
     K_r = V_.T@K@V_
     M_r = V_.T@M@V_
 
-    dt = rom_cls.data.dt 
+    dt = rom_cls.data.dt
     t = rom_cls.data.t
 
     _, rhs = global_F_matrix_t(rom_cls, node_eqnId, t, xi)
-    U_rom = V_.T@rhs
+    rhs_r = V_.T@rhs
     
     A_rom, B_rom = convert_to_ss(sparse.csr_matrix(K_r), sparse.csr_matrix(M_r))
 
     if rom_cls.mean is not None:
-        mean_mat = (V_.T@ K@rom_cls.mean.flatten()).reshape(-1,1)
-        rhs_r += mean_mat# addition
+        mean_mat = (V_.T@ K @rom_cls.mean.flatten()).reshape(-1,1)
+        rhs_r -= mean_mat# addition
 
     Ad, Bd = continuous_to_discrete(A_rom, B_rom, dt)
 
@@ -62,7 +62,7 @@ def solve_rom_dynamics(rom_cls, sol_init, V_, xi=None):
     # # x0 = np.pad(sol_init[mask], (len(sol_init[mask]), 0), mode='constant', constant_values=0)
     # _,_,x_out_rom = ctrl.forced_response(rom_sys, T=t, U=U_rom, X0 = sol_init, return_x=True)
 
-    x_out_rom = discrete_state_space_solver(Ad, Bd, U_rom, sol_init, len(t))
+    x_out_rom = discrete_state_space_solver(Ad, Bd, rhs_r, sol_init, len(t))
 
     return x_out_rom
 

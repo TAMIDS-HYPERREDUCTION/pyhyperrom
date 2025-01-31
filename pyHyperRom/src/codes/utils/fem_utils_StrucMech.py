@@ -4,6 +4,7 @@ import scipy as sp
 import scipy.sparse.linalg as spalg
 import control as ctrl
 from pylab import *
+from scipy.optimize import fsolve
 
 def handle_boundary_conditions(cls_data, bc):
     """
@@ -208,6 +209,20 @@ def init_global_systems(max_node_eqnId):
     rhs = np.zeros(max_node_eqnId)
     return K, M, rhs
 
+def check_values(xi_):
+    if xi_ is None:
+        return False
+    elif isinstance(xi_, (list, tuple, set, np.ndarray)):  # Check if xi_ is an iterable
+        return any(value for value in xi_)
+    else:
+        return False
+
+
+#################################################
+## Structural Dyanmics Problems [Transversal] ###
+#################################################
+
+
 def compute_element_matrices(cls_data, iel,  t=None, eval_stiff = True, eval_forces =True, notconstant = True):
     """
     Function: compute_element_matrices
@@ -256,14 +271,6 @@ def assemble_global_matrices(cls_data, iel, K, M, Ke_, Me_, Ce_,xi_iel):
 
     
     return K, M, Ke_d_, Ce_d_
-
-def check_values(xi_):
-    if xi_ is None:
-        return False
-    elif isinstance(xi_, (list, tuple, set, np.ndarray)):  # Check if xi_ is an iterable
-        return any(value for value in xi_)
-    else:
-        return False
 
 def global_KM_matrices(cls_data, node_eqnId, xi_=None):
 
@@ -374,7 +381,7 @@ def convert_second_to_first_order(K, M, C, rhs, t):
     """
 
     # Create A_sys matrix
-    M_inv = spalg.spsolve(M, sp.eye(M.shape[0]))  # Compute M inverse once
+    M_inv = spalg.spsolve(M, np.eye(M.shape[0]))  # Compute M inverse once
     MK_inv = spalg.spsolve(M, K).toarray()
     MC_inv = spalg.spsolve(M, C).toarray()
     
@@ -483,10 +490,10 @@ def solve_fos_dynamics(cls_data, sol_init, cv=1e-2, cm=1e-4):
     t_out, _, x_out = ctrl.forced_response(full_sys, T=t, U=U, X0=x0, return_x=True)
 
     x_sol= np.zeros((len(sol_init),len(t)))      
-    x_sol[mask,:] = x_out[:200,:]
+    x_sol[mask,:] = x_out[:int(A_sys.shape[0]/2),:]
     
     xd_sol= np.zeros((len(sol_init),len(t)))      
-    xd_sol[mask,:] = x_out[200:,:]
+    xd_sol[mask,:] = x_out[int(A_sys.shape[0]/2):,:]
     
     X = np.vstack([x_sol,xd_sol])
     
@@ -494,38 +501,399 @@ def solve_fos_dynamics(cls_data, sol_init, cv=1e-2, cm=1e-4):
     return t_out, X, rhs_e, cls_data.Ke_d, cls_data.Ce_d, mask, U, full_sys
 
 
-# def global_F_matrix(cls_data, node_eqnId,t=0):
+########################################
+## Static mechanics Problems [AXIAL] ###
+########################################
 
-#     rhs_e = []
-#     _, _, rhs = init_global_systems(max(node_eqnId))
-
-#     # Loop over all elements in the domain
-#     for iel in range(cls_data.data.n_cells):
-
-#         _, _, qe_ = compute_element_matrices(cls_data, iel, t, eval_stiff = False, eval_forces=True)
-#         rhs, rhs_e_ = assemble_global_forces(cls_data, iel, qe_, cls_data.Ke[iel], rhs)
-#         rhs_e.append(rhs_e_)
+def handle_boundary_conditions_statics(cls_data, bc):
+    """
+    Function: handle_boundary_conditions
+    Overview: This function handles the boundary conditions for finite element models in 1D, 2D, or 3D spaces.
+    It identifies the nodes that are subject to Dirichlet boundary conditions and computes their associated values.
     
-#     cls_data.rhs = rhs
-#     return rhs_e, rhs
+    Inputs:
+    - self: Refers to the data class that contains the mesh and finite element information.
+    - bc: A dictionary containing boundary conditions. The keys are dimension names ('x_min', 'x_max', etc.)
+          and the values are dictionaries with 'type' and 'value' fields.
+    
+    Outputs:
+    - Modifies the following class attributes:
+        - cls_data.dir_nodes: Sets the global node numbers subject to Dirichlet boundary conditions.
+        - cls_data.sol_dir: Sets the associated values for the nodes specified in dir_nodes.
+    
+    Example usage:
+    obj.handle_boundary_conditions(bc)
+    """
+    
+    dir_nodes = []
+    sol_dir = []
 
 
-# def assemble_global_forces(cls_data, iel, qe_, Ke_, rhs, xi_iel):
+    if cls_data.dim_ == 1:
 
-#     elem_glob_nodes = cls_data.data.gn[iel, :]
-#     elem_glob_node_nonzero_eqnId = cls_data.data.glob_node_nonzero_eqnId[iel]
-#     elem_glob_node_eqnId = cls_data.data.glob_node_eqnId[iel]
-#     elem_local_node_nonzero_eqnId = cls_data.data.local_node_nonzero_eqnId[iel]
+        if bc['x_min']['type'] != 'refl':
+            dir_nodes.append(0)
+            sol_dir.append(bc['x_min']['value'])
 
-#     # Check and handle Dirichlet boundary conditions
-#     if np.isin(0, elem_glob_node_eqnId):
-#         elem_dof_values = dirichlet_bc(cls_data, cls_data.sol_dir, cls_data.dir_nodes, elem_glob_nodes)
-#         fe = Ke_ @ elem_dof_values.reshape(-1, 1)
-#     else:
-#         fe = np.zeros((len(elem_glob_nodes), 1))
 
-#     # Compute the right-hand side for the element
-#     rhs_e_ = qe_[elem_local_node_nonzero_eqnId] - fe[elem_local_node_nonzero_eqnId].flatten()
-#     rhs[elem_glob_node_nonzero_eqnId-1] += xi_iel*rhs_e_
+        if bc['x_max']['type'] != 'refl':
+            dir_nodes.append(cls_data.n_verts-2)
+            sol_dir.append(bc['x_max']['value'])
+    
 
-#     return rhs, rhs_e_
+
+    dir_nodes = np.asarray(dir_nodes)
+    sol_dir = np.asarray(sol_dir)
+    
+    dir_nodes, index = np.unique(dir_nodes, return_index=True)
+    sol_dir = sol_dir[index]
+
+    indx = np.argsort(dir_nodes)
+
+    dir_nodes = dir_nodes[indx]
+    sol_dir = sol_dir[indx]
+    
+    cls_data.dir_nodes = dir_nodes
+    cls_data.sol_dir = sol_dir
+
+
+def assemble_global_matrices_statics(cls_data, iel, K, Ke_,J, Je_,xi_iel):
+
+    I_index, J_index = cls_data.data.global_indices[iel][0], cls_data.data.global_indices[iel][1]
+    i_index, j_index = cls_data.data.local_indices[iel][0] , cls_data.data.local_indices[iel][1] 
+    
+    K[I_index, J_index] += xi_iel*Ke_[i_index, j_index]
+    J[I_index, J_index] += xi_iel*Je_[i_index, j_index]
+
+    Ke_d_ = xi_iel*Ke_[i_index, j_index]
+
+    
+    return K, Ke_d_, J
+
+def assemble_global_forces_statics(cls_data, iel, qe_, Ke_, rhs, xi_iel):
+
+    elem_glob_nodes = cls_data.data.gn[iel, :]
+    elem_glob_node_nonzero_eqnId = cls_data.data.glob_node_nonzero_eqnId[iel]
+    elem_glob_node_eqnId = cls_data.data.glob_node_eqnId[iel]
+    elem_local_node_nonzero_eqnId = cls_data.data.local_node_nonzero_eqnId[iel]
+
+    # Check and handle Dirichlet boundary conditions
+    if np.isin(0, elem_glob_node_eqnId):
+        elem_dof_values = dirichlet_bc(cls_data, cls_data.sol_dir, cls_data.dir_nodes, elem_glob_nodes)
+        fe = Ke_ @ elem_dof_values
+    else:
+        fe = np.zeros(len(elem_glob_nodes))
+
+    
+    # Compute the right-hand side for the element
+    rhs_e_ = qe_[elem_local_node_nonzero_eqnId] - fe[elem_local_node_nonzero_eqnId]
+    rhs[elem_glob_node_nonzero_eqnId-1] += xi_iel*rhs_e_
+
+    return rhs, rhs_e_
+
+def compute_element_matrices_statics(cls_data, sol_prev, iel, eval_stiff = True, eval_forces =True, notconstant = True):
+    """
+    Function: compute_element_matrices
+    Overview: This function serves as a wrapper for computing element matrices in the finite element analysis.
+    It delegates the task to another method, 'element_matrices', which performs the actual calculations.
+    
+    Inputs:
+    - self: Refers to the FOS class that contains the mesh and finite element information.
+    - sol_prev: Previous solution, used for computing the new element matrices.
+    - iel: Index of the element for which the matrices are to be computed.
+    
+    Outputs:
+    - Returns the output from the 'element_matrices' method, which is typically an object or tuple
+      containing the element matrices.
+    
+    Example usage:
+    matrices = obj.compute_element_matrices(sol_prev, iel)
+    """
+    Ke_ = None
+    Je_ = None
+    qe_ = None
+
+    if eval_stiff:
+        Ke_, Je_ = cls_data.element_KM_matrices_fn_x(iel, sol_prev, notconstant)
+    
+    if eval_forces:
+        qe_ = cls_data.element_F_matrices_fn_x(iel)
+
+    return Ke_, Je_, qe_
+
+def global_K_matrices_statics(cls_data, sol_prev, node_eqnId, xi_=None):
+
+    # Initialize global matrices and vectors
+    K, J, _ = init_global_systems(max(node_eqnId))
+
+    # Lists to store element matrices and vectors
+    Ke_d = []
+    Ke = []
+    
+    if check_values(xi_):
+        xi = xi_
+        
+    else:
+        xi = np.ones(cls_data.data.n_cells)
+            
+
+    # Loop over all elements in the domain
+    for iel in range(cls_data.data.n_cells):
+        
+        if xi[iel] == 0:
+            continue
+        
+        # Compute element matrices for the current element
+        Ke_, Je_, _ = compute_element_matrices_statics(cls_data, sol_prev, iel, eval_stiff = True, eval_forces=False, notconstant = True)
+
+        # Assemble global matrices
+        K, Ke_d_, J = assemble_global_matrices_statics(cls_data, iel, K, Ke_, J, Je_, xi[iel])
+        
+
+        # Append the element matrices and vectors to the lists
+        Ke_d.append(Ke_d_)     
+        Ke.append(Ke_)
+        
+        
+    cls_data.Ke_d = Ke_d
+    cls_data.Ke = Ke
+
+    return K, Ke_d, J
+
+def global_F_matrix_statics(cls_data, node_eqnId, xi_=None):
+
+    rhs_e = []
+    _, _, rhs = init_global_systems(max(node_eqnId))
+    
+    rhs = rhs
+
+    if check_values(xi_):
+        xi = xi_
+        
+    else:
+        xi = np.ones(cls_data.data.n_cells)
+
+    iel_loop = 0
+    # Loop over all elements in the domain
+    for iel in range(cls_data.data.n_cells):
+        
+        if xi[iel] == 0:
+            continue
+
+        _,_, qe_ = compute_element_matrices_statics(cls_data, None, iel, eval_stiff = False, eval_forces=True)
+        rhs, rhs_e_ = assemble_global_forces_statics(cls_data, iel, qe_, cls_data.Ke[iel_loop], rhs, xi[iel])
+        rhs_e.append(rhs_e_)
+
+        iel_loop+=1
+        
+    cls_data.rhs = rhs
+    cls_data.rhs_e = rhs_e
+    
+    return rhs_e, rhs
+
+
+## Newton's approach
+
+
+def eval_resJac_statics(self, sol_prev, mask, node_eqnId):
+
+   
+    K, Ke_d, J = global_K_matrices_statics(self, sol_prev, node_eqnId, xi_= None)
+    rhs_e, rhs = global_F_matrix_statics(self, node_eqnId, xi_= None)
+    
+    res = K @ sol_prev[mask] - rhs
+    
+    # print(np.linalg.norm(res))
+    
+    return K,J,res, Ke_d
+
+
+def solve_fos_statics(self, sol_init, tol=1e-6, max_iter=3000, op=False):
+    """
+    Function: solve_fos
+    Overview: This function employs the Newton-Raphson method to solve the finite element system
+    of equations for a Field of Study (FOS). It iteratively updates the solution field until the residual
+    norm falls below a specified tolerance or the maximum number of iterations is reached.
+    
+    Inputs:
+    - self: Refers to the FOS class that contains the mesh and finite element information.
+    - sol_init: Initial guess for the solution field.
+    - tol: Tolerance for the residual norm to check for convergence (default is 1e-5).
+    - max_iter: Maximum number of iterations for the Newton-Raphson process (default is 300).
+    
+    Outputs:
+    - Returns the final solution field, local stiffness matrices, right-hand side vectors, and a mask array:
+        - sol.reshape(-1, 1): Final solution field as a column vector.
+        - Ke: List of local stiffness matrices for each element.
+        - rhs_e: List of right-hand side vectors for each element.
+        - mask: An array used to filter nodes based on certain conditions.
+    
+    Example usage:
+    sol, Ke, rhs_e, mask = obj.solve_fos(sol_init, tol=1e-5, max_iter=300)
+    """
+
+    # Handle boundary conditions and get node equation IDs    
+    node_eqnId = self.node_eqnId
+
+    # Create a mask for nodes that do not have a Dirichlet boundary condition
+    mask = node_eqnId != 0
+
+    self.mask = mask
+
+    # Update initial temperature values for Dirichlet boundary nodes
+    sol_init[~mask] = self.sol_dir
+
+    # Copy the initial temperature field
+    sol = np.copy(sol_init)
+
+
+    K,Jac,res,_ = eval_resJac_statics(self, sol, mask, node_eqnId)
+    
+    
+    # Compute the initial norm of the residual
+    norm_ = np.linalg.norm(res)
+    # norm_ = max(abs(res))
+
+    if op:
+        print('initial residual =', norm_, "\n")
+
+    it = 0
+
+    # Start the Newton-Raphson iterative process
+    
+    while (it < max_iter) and not(norm_ < tol):
+        
+        # Solve for the temperature increment (delta) using the current Jacobian and residual
+        delta = spalg.spsolve(Jac.tocsc(), -res)
+
+        # Update the temperature field (excluding Dirichlet) using the computed increment
+        sol[mask] += 1e-1*delta
+
+        # Re-evaluate the Jacobian, residual, and other relevant matrices/vectors
+        K,Jac,res,Ke_d = eval_resJac_statics(self, sol, mask, node_eqnId)
+
+        # Compute the current norm of the residual
+        norm_ = np.linalg.norm(res)
+
+        # Print current iteration details
+        if op:
+            print("iter {}, NL residual={}, delta={}".format(it, norm_, np.max(delta)))
+
+        # Check convergence
+        if norm_ < tol:
+
+            if op:
+                print('Convergence !!!')
+                print(sol)
+
+        else:
+            if it == max_iter - 1:
+                print('\nWARNING: nonlinear solution has not converged')
+
+        # Increment the iteration counter
+        it += 1
+
+    return sol, self.Ke_d, self.rhs_e, mask
+
+
+## Fsolve
+
+# def eval_res_fsolve_fos_statics(self, sol_prev, mask, node_eqnId):
+
+#     """
+#     Function: eval_resJac
+#     Overview: This function evaluates the residual and Jacobian matrices for the finite element analysis.
+#     It loops through all elements, assembles the global matrices, and handles Dirichlet boundary conditions.
+    
+#     Inputs:
+#     - self: Refers to the FOS class, containing the mesh and finite element information.
+#     - mask: An array used to filter nodes based on certain conditions.
+#     - dir_nodes: A list of global node numbers corresponding to Dirichlet boundary conditions.
+#     - sol_dir: An array of Dirichlet boundary condition values.
+#     - sol_prev: Previous solution, used for computing the new element matrices.
+#     - node_eqnId: Array containing equation IDs for all nodes in the mesh.
+    
+#     Outputs:
+#     - Returns the updated global matrices and vectors:
+#         - K + J: Sum of the global stiffness and Jacobian matrices.
+#         - res: Residual vector.
+#         - Ke: List of local stiffness matrices for each element.
+#         - rhs_e: List of right-hand side vectors for each element.
+    
+#     Example usage:
+#     K_J, res, Ke, rhs_e = obj.eval_resJac(mask, dir_nodes, sol_dir, sol_prev, node_eqnId)
+#     """
+    
+    
+#     K, Ke, J = global_K_matrices_statics(self, sol_prev, node_eqnId, xi_=None)
+#     rhs_e, rhs = global_F_matrix_statics(self, node_eqnId, xi_=None)
+    
+#     # print(K)
+    
+#     res = K @ sol_prev[mask] - rhs
+    
+#     res_full = np.zeros_like(sol_prev)
+    
+#     res_full[mask] = res
+    
+#     print(np.linalg.norm(res_full))
+    
+#     return res_full
+
+
+
+# def fsolve_fos_statics(self, sol_init, tol=1e-5, max_iter=300, op=False):
+#     """
+#     Function: solve_fos
+#     Overview: This function employs the Newton-Raphson method to solve the finite element system
+#     of equations for a Field of Study (FOS). It iteratively updates the solution field until the residual
+#     norm falls below a specified tolerance or the maximum number of iterations is reached.
+
+#     Inputs:
+#     - self: Refers to the FOS class that contains the mesh and finite element information.
+#     - sol_init: Initial guess for the solution field.
+#     - tol: Tolerance for the residual norm to check for convergence (default is 1e-5).
+#     - max_iter: Maximum number of iterations for the Newton-Raphson process (default is 300).
+
+#     Outputs:
+#     - Returns the final solution field, local stiffness matrices, right-hand side vectors, and a mask array:
+#         - sol.reshape(-1, 1): Final solution field as a column vector.
+#         - Ke: List of local stiffness matrices for each element.
+#         - rhs_e: List of right-hand side vectors for each element.
+#         - mask: An array used to filter nodes based on certain conditions.
+
+#     Example usage:
+#     sol, Ke, rhs_e, mask = obj.solve_fos(sol_init, tol=1e-5, max_iter=300)
+#     """
+
+#     # Handle boundary conditions and get node equation IDs    
+#     node_eqnId = self.node_eqnId
+
+#     # Create a mask for nodes that do not have a Dirichlet boundary condition
+#     mask = node_eqnId != 0
+#     self.mask = mask
+
+#     # Update initial temperature values for Dirichlet boundary nodes
+#     sol_init[~mask] = self.sol_dir
+
+#     # Copy the initial temperature field
+#     sol = np.copy(sol_init)
+
+#     # Evaluate the reduced Jacobian and residual matrices for the initial guess
+    
+#     res = lambda U_: eval_res_fsolve_fos_statics(self, U_, mask, node_eqnId)
+
+#     # sol = fsolve(res, sol, xtol=1e-13)
+    
+#     sol = sp.optimize.broyden1(res, sol)#, f_tol=1e-8)
+    
+    
+#     # Update initial temperature values for Dirichlet boundary nodes
+#     sol[~mask] = self.sol_dir
+    
+    
+#     print(f"for final sol {np.linalg.norm(res(sol))}")
+
+
+#     return sol, self.Ke, self.rhs_e, mask
+

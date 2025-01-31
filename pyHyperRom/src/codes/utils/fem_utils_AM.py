@@ -6,7 +6,6 @@ import control as ctrl
 from pylab import *
 from scipy.linalg import expm
 from scipy.integrate import solve_ivp
-import nbkode
 from scipy.integrate import ode
 
 
@@ -568,7 +567,8 @@ def continuous_to_discrete(A, B, delta_t):
     """
 
     A_d = expm(A * delta_t)
-    B_d = np.dot(np.linalg.solve(A,A_d-np.eye(A_d.shape[0])),B)
+    AinvB = np.linalg.solve(A,B)
+    B_d = (A_d-np.eye(A_d.shape[0]))@AinvB
     
     
     return A_d, B_d

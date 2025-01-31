@@ -1,4 +1,4 @@
-from src.codes.prob_classes.base_class_heat_conduction import FOS_FEM
+from codes.prob_classes.heat_conduction.base_class_heat_conduction import FOS_FEM
 
 from src.codes.utils.fem_utils_HC import *
 from src.codes.utils.plot_files.plot_utils import OneDPlot as plot

@@ -30,38 +30,116 @@ class SystemProperties:
         return mat_layout, src_layout
 
     def define_properties(self):
-        tune = 1
+
         fdict = {}
         
         # Define conductivity properties using lambda functions
+        # cond_list_lin = [
+        #     lambda T, mu: 1.05 * mu * tune+0.0*T,
+        #     lambda T, mu: mu * tune * 7.51+0.0*T
+        # ]
+        # fdict["cond_lin"] = cond_list_lin
+
+        # # Define conductivity properties using lambda functions
+        # dcond_list_lin = [
+        #     lambda T, mu: 0.0*T,
+        #     lambda T, mu: 0.0*T
+        # ]
+        # fdict["dcond_lin"] = dcond_list_lin
+
+        # # Define conductivity properties using lambda functions
+        # qext_list = [
+        #     lambda T, mu: 1.05 * mu * tune + 150.0*T, #+ 2150 / (T - 73.15),
+        #     lambda T, mu: mu * tune * 7.51 + 0.0*T + 2.09e-2 * T #- 1.45e-5 * T**2 + 7.67e-9 * T**3
+        # ]
+        # fdict["qext"] = qext_list
+
+        # # Define the derivative of conductivity properties
+        # dqext_list = [
+        #     lambda T, mu: 150.+0.0*T, #-2150 / (T - 73.15)**2,
+        #     lambda T, mu: 0.0*T + 2.09e-2 #- 2 * 1.45e-5 * T + 3 * 7.67e-9 * T**2
+        # ]
+        # fdict["dqext"] = dqext_list
+
+################################################################
+
+        # External heat source properties
+
+        # Linear Heat conduction:
+        
+        # qext_list = [
+        #     lambda T, beta: beta + 35000.0 + 0.0*T, #for deim used  100*beta on both
+        #     lambda T, beta: 10*beta + 5000.0 + 0.0*T
+        # ]
+        
+        # fdict["qext"] = qext_list
+
+        # # Derivative of the external heat source properties
+        
+        # dqext_list = [
+        #     lambda T, beta: 0.0*T,
+        #     lambda T, beta: 0.0*T
+        # ]
+        # fdict["dqext"] = dqext_list
+
+        # # Define conductivity properties using lambda functions
+        
+        # cond_list = [
+        #     lambda T, mu: mu + 16 + 0.0*T,
+        #     lambda T, mu: mu + 30 + 0.0*T 
+        # ]
+        # fdict["cond"] = cond_list
+
+        # # Define the derivative of conductivity properties
+        
+        # dcond_list = [
+        #     lambda T, mu: 0.0*T,
+        #     lambda T, mu: 0.0*T
+        # ]
+        # fdict["dcond"] = dcond_list
+        
+        # return fdict
+    
+###############################################################
+
+        ## Nonlinear HC
+
+        qext_list = [
+            lambda T, beta: beta + 35000.0 + T/10, #for deim used  100*beta on both
+            lambda T, beta: 10*beta + 5000.0 + 0.0*T
+        ]
+        
+        fdict["qext"] = qext_list
+
+        # Derivative of the external heat source properties
+        
+        dqext_list = [
+            lambda T, beta: 0.0*T+1/10,
+            lambda T, beta: 0.0*T
+        ]
+        fdict["dqext"] = dqext_list
+        
+
+        # Define conductivity properties using lambda functions
+        
+        # Define conductivity properties using lambda functions
         cond_list = [
-            lambda T, mu: 1.05 * mu * tune + 2150 / (T - 73.15),
-            lambda T, mu: mu * tune * 7.51 + 2.09e-2 * T - 1.45e-5 * T**2 + 7.67e-9 * T**3
+            lambda T, mu: 16 + mu + 2150 / (T - 73.15),
+            lambda T, mu: 30 + mu + 2.09e-2 * T - 1.45e-5 * T**2 + 7.67e-9 * T**3
         ]
         fdict["cond"] = cond_list
 
         # Define the derivative of conductivity properties
         dcond_list = [
             lambda T, mu: -2150 / (T - 73.15)**2,
-            lambda T, mu: 2.09e-2 - 2 * 1.45e-5 * T + 3 * 7.67e-9 * T**2
+            lambda T, mu:  2.09e-2 - 2 * 1.45e-5 * T + 3 * 7.67e-9 * T**2
         ]
+
         fdict["dcond"] = dcond_list
-
-        # External heat source properties
-        qext_list = [
-            lambda T, mu: 35000.0 +0.0*T,
-            lambda T, mu: 5000.0 +0.0*T
-        ]
-        fdict["qext"] = qext_list
-
-        # Derivative of the external heat source properties
-        dqext_list = [
-            lambda T, mu: 0.0*T,
-            lambda T, mu: 0.0*T
-        ]
-        fdict["dqext"] = dqext_list
+       
         
         return fdict
+
 
     def define_boundary_conditions(self):
         bc = {

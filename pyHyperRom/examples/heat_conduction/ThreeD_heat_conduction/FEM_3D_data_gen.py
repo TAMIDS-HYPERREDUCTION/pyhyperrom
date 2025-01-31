@@ -7,7 +7,7 @@ os.chdir(desired_path)
 sys.path.append(desired_path)
 
 from src.codes.basic import *
-from src.codes.prob_classes.base_class_heat_conduction import HeatConductionSimulationData
+from codes.prob_classes.heat_conduction.base_class_heat_conduction import HeatConductionSimulationData
 import dill as pickle
 
 

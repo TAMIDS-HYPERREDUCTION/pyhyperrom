@@ -73,4 +73,53 @@ def ecsw_red(d, V_sel, Le, data, n_sel, N_snap, NL_solutions, NL_solutions_mean,
     else:
         x, residual = nnls_sp(C, d_vec.flatten(), atol=tol, maxiter=1e6)
 
+
     return x, residual/norm_d_vec
+
+
+
+def ecsw_red_SS_parametric(d, V_sel, Le, data, n_sel, NL_solutions, NL_solutions_mean, residual_func, train_mask_t, tol=None):
+    
+
+    ncells = d.n_cells
+    C = np.zeros((n_sel * NL_solutions.shape[0] * NL_solutions.shape[1], int(ncells)))
+    V_mask_ = V_sel
+    P_sel = V_sel @ V_sel.T
+
+    
+    for k in range(NL_solutions.shape[0]):
+        
+        for i in range(NL_solutions.shape[1]):
+    
+            dim = int(NL_solutions.shape[2]/2)
+    
+            # Project the solution onto the selected basis
+            projected_sol_mask_d = np.dot(P_sel, NL_solutions[k][i,:dim]-NL_solutions_mean) + NL_solutions_mean
+            projected_sol_mask_v = np.dot(P_sel, NL_solutions[k][i,dim:])
+
+
+            for j in range(ncells):
+    
+                col_indices = np.argmax(Le[j], axis=1)
+                if j==48:
+                    res = residual_func(i,j,k, projected_sol_mask_d[col_indices],projected_sol_mask_v[col_indices],data, train_mask_t)
+                else:
+                    res = residual_func(i,j,k, projected_sol_mask_d[col_indices],projected_sol_mask_v[col_indices],data, train_mask_t)
+
+                Ce = np.dot( np.transpose(V_mask_[col_indices]), res )
+                C[(i+NL_solutions.shape[1]*k) * n_sel : (i+NL_solutions.shape[1]*k + 1) * n_sel, j] = Ce
+
+
+    d_vec = C @ np.ones((ncells, 1))
+    norm_d_vec = np.linalg.norm(d_vec)
+    print(f"norm of rhs: {norm_d_vec}")
+
+
+    if tol is None:
+        x, residual = nnls(C, d_vec.flatten(), maxiter=1e6)
+    else:
+        x, residual = nnls_sp(C, d_vec.flatten(), atol=tol, maxiter=1e6)
+
+    return x, residual/norm_d_vec
+
+

@@ -25,10 +25,11 @@ By applying both the H2 and H-infinity norms, engineers and system designers can
 def compare_models(FOS_sol, ROM_sol, t, fc=None):
 # def compare_models(fom, rom, FOS_sol, ROM_sol, t, fc=None):
     # Time Response Analysis
-    time_freq_comparison(FOS_sol, ROM_sol, t, fc)
+    err_disp, err_vel = time_freq_comparison(FOS_sol, ROM_sol, t, fc)
 
     # Eigenvalue Analysis
     # eigenvalue_analysis(fom, rom)
+    return err_disp, err_vel
 
 
 def time_freq_comparison(FOS_sol, ROM_sol, t, fc=None):
@@ -241,3 +242,88 @@ def combine_pos_neg_freq(F, Pxx):
     Pxx_combined = Pxx_positive + Pxx_negative
     
     return F_positive, Pxx_combined
+
+
+
+# def fom_data_processor_stacked(t, T, solution_snapshot_orig):
+
+#     # Extract and compute time parameters
+#     fs = 1 / (t[1] - t[0])
+#     nt = len(t)
+#     ndata = solution_snapshot_orig.shape[0]
+#     nset = round(ndata / nt)
+
+
+#     # Remove transient and center on IC
+#     start_indices = np.arange(0, nset * nt, nt)
+#     end_indices = start_indices + nt
+#     solution_snapshot = np.concatenate([solution_snapshot_orig[start:end, :] for start, end in zip(start_indices, end_indices)], axis=0)
+#     ic_values = solution_snapshot[start_indices, :]
+#     solution_snapshot_f1 = solution_snapshot - np.repeat(ic_values, nt, axis=0)
+    
+#     # Remove time-periods
+#     len_1p = int(np.ceil(T * fs)+1)
+#     # m = 2
+
+#     # solution_snapshot_f2 = np.concatenate([solution_snapshot_f1[start + m*len1p : start + (m+1)*len_1p, :] for start in start_indices], axis=0)
+#     solution_snapshot_f2 = np.concatenate([solution_snapshot_f1[end-len_1p : end, :] for end in end_indices], axis=0)
+
+#     # Recalculating Parameters
+#     # t = t[int(fs):int(fs) + len_1p] - t[int(fs)]
+#     t = t[-len_1p:]
+#     t-= t[0]
+#     nt = len(t)
+#     tstop = t[-1]
+
+        
+#     return solution_snapshot_f2, nt, fs, tstop, ndata, nset, t
+
+
+def fom_data_processor_stacked_q(t, T, solution_snapshot_orig,q_mus):
+
+    # Extract and compute time parameters
+    t=np.copy(t)
+    fs = 1 / (t[1] - t[0])
+    nt = len(t)
+    ndata = solution_snapshot_orig.shape[0]
+    nset = round(ndata / nt)
+
+
+    # Remove transient and center on IC
+    start_indices = np.arange(0, nset * nt, nt)
+    end_indices = start_indices + nt
+    solution_snapshot = np.concatenate([solution_snapshot_orig[start:end, :] for start, end in zip(start_indices, end_indices)], axis=0)
+    ic_values = solution_snapshot[start_indices, :]
+    solution_snapshot_f1 = solution_snapshot - np.repeat(ic_values, nt, axis=0)
+    
+    # Remove time-periods
+    len_1p = int(np.ceil(T * fs)+1)
+    # m = 2
+
+    # solution_snapshot_f2 = np.concatenate([solution_snapshot_f1[start + m*len1p : start + (m+1)*len_1p, :] for start in start_indices], axis=0)
+    solution_snapshot_f2 = np.concatenate([solution_snapshot_f1[end-len_1p : end, :] for end in end_indices], axis=0)
+
+    ### process q_mus 
+    lp_1 = len(q_mus)
+    lp_2 = len(q_mus[0])
+    # lp_2 = len(q_mus[0][0].shape[])
+    q_mus_truncated = [[] for _ in range(lp_1)]
+
+    for i in range(lp_1):
+        for j in range(lp_2):
+            q_mus_truncated[i].append(q_mus[i][j][:,-len_1p:])
+
+
+
+    ###
+
+    # Recalculating Parameters
+    # t = t[int(fs):int(fs) + len_1p] - t[int(fs)]
+    t = t[-len_1p:]
+    t-= t[0]
+    nt = len(t)
+    tstop = t[-1]
+
+        
+    return solution_snapshot_f2, nt, fs, tstop, ndata, nset, t, q_mus_truncated
+

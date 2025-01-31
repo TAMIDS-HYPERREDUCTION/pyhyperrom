@@ -1,12 +1,12 @@
 # Custom Matplotlib Style Sheet (custom_style.mplstyle)
 
 ## Font properties
-font.size : 12              # General font size
-axes.labelsize : 12         # Font size for axis labels
-axes.titlesize : 12         # Font size for axis titles
-legend.fontsize : 12        # Font size for legend
-xtick.labelsize : 12        # Font size for x-axis tick labels
-ytick.labelsize : 12        # Font size for y-axis tick labels
+font.size : 15              # General font size
+axes.labelsize : 15         # Font size for axis labels
+axes.titlesize : 15         # Font size for axis titles
+legend.fontsize : 15        # Font size for legend
+xtick.labelsize : 15        # Font size for x-axis tick labels
+ytick.labelsize : 15        # Font size for y-axis tick labels
 
 
 ## Use LaTeX for math formatting
@@ -32,8 +32,8 @@ axes.facecolor : [0.95,0.95,0.95]
 axes.linewidth : 0.5
 axes.spines.right : False
 axes.spines.top : False
-axes.xmargin : 0.01  # 1% margin on the x-axis
-axes.ymargin : 0.01  # 1% margin on the y-axis
+axes.xmargin : 0.03  # 1% margin on the x-axis
+axes.ymargin : 0.03  # 1% margin on the y-axis
 
 
 ## Default: color-blind and photocopy friendly but only three-lines

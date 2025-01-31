@@ -7,13 +7,13 @@ os.chdir(desired_path)
 sys.path.append(desired_path)
 
 from src.codes.basic import *
-from src.codes.prob_classes.base_class_heat_conduction import HeatConductionSimulationData
+from codes.prob_classes.heat_conduction.base_class_heat_conduction import HeatConductionSimulationData
 import dill as pickle
 
 
 #%%
 # Define the reference points and widths
-n_ref = np.array([8,8], dtype=int)
+n_ref = np.array([5,5], dtype=int)
 L = [20,25]
 params = np.arange(1., 4.0, 0.01)
 num_snapshots = 100

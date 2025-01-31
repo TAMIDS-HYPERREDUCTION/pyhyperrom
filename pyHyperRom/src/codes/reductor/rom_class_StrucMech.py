@@ -1,4 +1,4 @@
-from src.codes.prob_classes.base_class_struc_mech_continuous_vibration import FOS_FEM
+from src.codes.prob_classes.structural_mechanics.base_class_struc_mech_continuous_vibration import FOS_FEM
 from src.codes.utils.fem_utils_StrucMech import *
 from src.codes.utils.rom_utils import *
 from src.codes.basic import *
