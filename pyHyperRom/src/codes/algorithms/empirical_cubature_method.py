@@ -1,3 +1,9 @@
+###
+# Source:
+# R. Bravo, localECM: A Local Empirical Cubature Method Implementation, GitHub, 2024. [Online]. Available: https://github.com/Rbravo555/localECM. [Accessed: Feb. 3, 2025].
+###
+
+
 import numpy as np
 
 try:

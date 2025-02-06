@@ -1,3 +1,8 @@
+###
+# Source: 
+# https://github.com/scipy/scipy/blob/maintenance/1.13.x/scipy/optimize/_nnls.py
+###
+
 import numpy as np
 from scipy.linalg import solve
 

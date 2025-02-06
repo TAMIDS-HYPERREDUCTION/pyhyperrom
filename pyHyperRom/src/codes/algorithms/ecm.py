@@ -1,190 +1,137 @@
 from src.codes.basic import *
 from src.codes.algorithms.empirical_cubature_method import EmpiricalCubatureMethod
-from scipy.special import roots_legendre
 
 def ECM(FOS, V_sel, Le, data, N_snap, NL_solutions, NL_solutions_mean, residual_func_ecm, tol=None, SS=False):
-    
     """
-    Executes Enhanced Compact Subspace-Wise (ECSW) reduction for nonlinear finite element analysis. This method
-    integrates mesh information, selected vectors, and nonlinear solutions to solve least squares problems efficiently.
+    Executes Enhanced Compact Subspace-Wise (ECSW) reduction for nonlinear finite element analysis.
+    This function integrates mesh information, selected basis vectors, and nonlinear solution snapshots 
+    to set up and solve a least squares problem via an Empirical Cubature Method (ECM) approach.
 
     Parameters:
-    d (object): Contains mesh and finite element model details.
-    V_sel (array): Basis vectors selected for the reduction process.
-    Le (matrix): Links elements to nodes in the mesh.
-    data (object): General data related to the finite element model, including stiffness matrices and source terms.
-    n_sel (int): The quantity of basis vectors chosen.
-    N_snap (int): The total snapshots considered for analysis.
-    NL_solutions (array): Adjusted nonlinear solutions for each snapshot.
-    NL_solutions_mean (array): The mean of nonlinear solutions.
-    residual_func (function): A custom function to compute residuals. Depends on the problem. Located in Base class.
-    tol (float, optional): Specifies the tolerance level for the non-negative least squares solver. Defaults to None.
+    -----------
+    FOS: object
+        Finite element model output structure containing mesh data and Gauss weights.
+    V_sel: ndarray
+        Selected basis vectors used for the projection/reduction process.
+    Le: ndarray or matrix
+        Connectivity matrix linking elements to nodes in the finite element mesh.
+    data: dict or object
+        Contains additional FEM data such as stiffness matrices or force vectors.
+    N_snap: int
+        The number of snapshots used in the analysis.
+    NL_solutions: ndarray
+        Array of nonlinear solutions for each snapshot.
+    NL_solutions_mean: ndarray
+        Mean value of the nonlinear solutions, used for adjustment.
+    residual_func_ecm: function
+        A user-defined function to compute the residual for a given element, Gauss point, and snapshot.
+    tol: float, optional
+        Tolerance for selecting the number of modes based on singular values (default is None).
+    SS: bool, optional
+        An optional flag parameter (usage not detailed in the code, default is False).
 
     Returns:
-    tuple: Contains the solution to the least squares problem and the normalized residual of the solution.
-    
-    The function initializes with the mesh's cell count, sets up a zero matrix for projection and adjustment, and iterates
-    through snapshots to project solutions and compute residuals. It concludes by solving a non-negative least squares
-    problem to find the best fit solution and its corresponding residual, normalized by the right-hand side vector norm.
+    --------
+    tuple
+        A tuple containing:
+          - W: ndarray, the weights from the ECM process.
+          - Z: ndarray, the selected indices (cubature points) from the ECM.
+          - S: ndarray, the singular values from the SVD of the projection matrix.
     """
-
+    # Retrieve FEM model details from the FOS object.
     d = FOS.data
+
+    # Obtain the number of cells/elements in the mesh.
     ncells = d.n_cells
+
+    # Create a copy of the selected basis vectors to avoid modifying the original.
     V_mask_ = np.copy(V_sel)
+
+    # Compute the projection operator from the selected basis vectors.
     P_sel = V_sel @ V_sel.T
 
-    # def create_A_FE_reduced(basis, elements, K_each_gauss_p, F_each_gauss_p, num_elements, p_values, connectivity,num_modes):   
+    # Determine the number of Gauss points from the length of the weight vector.
     num_gauss_points = len(FOS.w)
-    wi = FOS.w
-    # wi, _ = roots_legendre(num_gauss_points)
 
-    # Calculate the number of independent elements in the stiffness matrix
+    # Retrieve the Gauss weights vector.
+    wi = FOS.w
+
+    # Get the number of modes (columns) in the selected basis.
     num_modes = V_sel.shape[-1]
 
-    # independent_ele_per_stiffness_mat = int(num_modes * (num_modes + 1) / 2)
- 
-    # Initialize the A_FE matrix with appropriate dimensions
+    # Initialize the finite element projection matrix R_FE.
+    # Its rows correspond to (number of cells * number of Gauss points)
+    # and its columns correspond to (number of modes * number of snapshots).
     R_FE = np.zeros((ncells * num_gauss_points, num_modes * N_snap))
 
-    # Add zero rows to the basis at the top and bottom
-    p=0
-    # Loop through each parameter value (p_values) and element
+    # A variable 'p' is initialized (currently unused in the computation).
+    p = 0
+
+    # Loop over each snapshot index.
     for i in range(N_snap):
+        # For each snapshot, project the nonlinear solution using the projection operator and add the mean.
         projected_sol_mask = np.dot(P_sel, NL_solutions[i]) + NL_solutions_mean
 
+        # Loop over each cell/element in the mesh.
         for e in range(ncells):
-
-            col_indices = np.argmax(Le[e], axis=1)            
+            # Determine the relevant indices for the current element using its connectivity.
+            col_indices = np.argmax(Le[e], axis=1)
+            
+            # Extract the force vector for the current snapshot and element.
             fe_ = data['fe_ecm_mus'][i][e]
 
-            if e==ncells-1:
+            # This conditional appears to serve as a breakpoint or debug marker for the last cell.
+            if e == ncells - 1:
                 stop = 1
 
-            for j in range(len(wi)):                
-                # Extract the corresponding rows from the basis using connectivity
-                res = residual_func_ecm(i,e,j,projected_sol_mask[col_indices],data)
-                Ce = np.dot(np.transpose(V_mask_[col_indices]), res) + V_mask_[col_indices].T@fe_/(wi[j]*len(wi))
-
+            # Loop over each Gauss point.
+            for j in range(len(wi)):
+                # Compute the residual for the given snapshot, element, and Gauss point.
+                # The residual function uses the projected solution at the element nodes (indexed by col_indices) and additional data.
+                res = residual_func_ecm(i, e, j, projected_sol_mask[col_indices], data)
+                
+                # Compute the contribution Ce by projecting the residual onto the basis at the selected indices,
+                # and adding a force term scaled by the Gauss weight and the number of Gauss points.
+                Ce = np.dot(np.transpose(V_mask_[col_indices]), res) + V_mask_[col_indices].T @ fe_ / (wi[j] * len(wi))
+                
+                # Insert the computed Ce vector into the appropriate block of the R_FE matrix.
+                # The row index is determined by the current Gauss point and element.
+                # The column block is determined by the current snapshot and the number of modes.
                 R_FE[j + len(wi) * e, i * num_modes:(i + 1) * num_modes] = Ce.flatten()
 
-
-
+    # Perform Singular Value Decomposition (SVD) on the assembled projection matrix R_FE.
     U_FE, S, _ = np.linalg.svd(R_FE)
 
-    plt.semilogy(S,'o-')
+    # Plot the singular values on a semilogarithmic scale to visualize their decay.
+    plt.semilogy(S, 'o-')
     
+    # Determine the number of finite element modes to retain based on the provided tolerance.
+    # If a tolerance is specified, select the first singular value index below that tolerance;
+    # otherwise, use a default tolerance value of 1e-5.
     if tol is not None:
         N_FE_sel = np.where(S < tol)[0][0]
     else:
         N_FE_sel = np.where(S < 1e-5)[0][0]
 
+    # Build the weights vector for the finite elements by repeating the Gauss weights for each cell.
     W_FE = np.array([wi for _ in range(ncells)])
-    W_FE=W_FE.reshape(-1,1).flatten()
+    # Reshape the weights array into a one-dimensional vector.
+    W_FE = W_FE.reshape(-1, 1).flatten()
 
-    ECM = EmpiricalCubatureMethod() # Setting up Empirical Cubature Method problem
-    ECM.SetUp(U_FE[:,:N_FE_sel].T, Weights = W_FE, constrain_sum_of_weights=False)
-    # ECM.SetUp(U_FE.T, Weights = W_FE, constrain_sum_of_weights=False)
+    # Instantiate the Empirical Cubature Method (ECM) object.
+    ECM = EmpiricalCubatureMethod()
+
+    # Set up the ECM problem using the reduced basis (from the SVD) corresponding to the selected number of modes.
+    # The reduced basis is transposed and the Gauss weights are provided.
+    # The option 'constrain_sum_of_weights' is set to False.
+    ECM.SetUp(U_FE[:, :N_FE_sel].T, Weights=W_FE, constrain_sum_of_weights=False)
+
+    # Execute the ECM algorithm to compute cubature weights and selected indices.
     ECM.Run()
 
+    # Retrieve the computed weights (squeezed to remove extra dimensions) and indices (cubature points).
     W = np.squeeze(ECM.w)
     Z = ECM.z
 
-    return W,Z,S
-
-
-
-
-
-
-
-
-
-    # for i in range(N_snap):
-
-    #     if SS:
-
-    #         dim = int(len(NL_solutions[0])/2)
-
-    #         # Project the solution onto the selected basis
-    #         projected_sol_mask_d = np.dot(P_sel, NL_solutions[i,:dim]-NL_solutions_mean[:dim]) + NL_solutions_mean[:dim]
-    #         projected_sol_mask_v = np.dot(P_sel, NL_solutions[i,dim:])
-
-
-    #         for j in range(ncells):
-
-    #             col_indices = np.argmax(Le[j], axis=1)
-    #             res = residual_func(i,j,projected_sol_mask_d[col_indices],projected_sol_mask_v[col_indices],data)
-    #             Ce = np.dot( np.transpose(V_mask_[col_indices]), res)
-    #             C[i * n_sel : (i + 1) * n_sel, j] = Ce
-
-
-        # else:
-        # projected_sol_mask = np.dot(P_sel, NL_solutions[i]) + NL_solutions_mean
-
-        # for j in range(ncells):
-
-        #     col_indices = np.argmax(Le[j], axis=1)
-        #     res = residual_func(i,j,projected_sol_mask[col_indices],data)
-        #     Ce = np.dot( np.transpose(V_mask_[col_indices]), res)
-        #     C[i * n_sel : (i + 1) * n_sel, j] = Ce
-
-
-    # d_vec = C @ np.ones((ncells, 1))
-    # norm_d_vec = np.linalg.norm(d_vec)
-    # print(f"norm of rhs: {norm_d_vec}")
-
-    # if tol is None:
-    #     x, residual = nnls(C, d_vec.flatten(), maxiter=1e6)
-    # else:
-    #     x, residual = nnls_sp(C, d_vec.flatten(), atol=tol, maxiter=1e6)
-
-
-    # return x, residual/norm_d_vec
-
-
-
-# def ecsw_red_SS_parametric(d, V_sel, Le, data, n_sel, NL_solutions, NL_solutions_mean, residual_func, train_mask_t, tol=None):
-    
-
-#     ncells = d.n_cells
-#     C = np.zeros((n_sel * NL_solutions.shape[0] * NL_solutions.shape[1], int(ncells)))
-#     V_mask_ = V_sel
-#     P_sel = V_sel @ V_sel.T
-
-    
-#     for k in range(NL_solutions.shape[0]):
-        
-#         for i in range(NL_solutions.shape[1]):
-    
-#             dim = int(NL_solutions.shape[2]/2)
-    
-#             # Project the solution onto the selected basis
-#             projected_sol_mask_d = np.dot(P_sel, NL_solutions[k][i,:dim]-NL_solutions_mean) + NL_solutions_mean
-#             projected_sol_mask_v = np.dot(P_sel, NL_solutions[k][i,dim:])
-
-
-#             for j in range(ncells):
-    
-#                 col_indices = np.argmax(Le[j], axis=1)
-#                 if j==48:
-#                     res = residual_func(i,j,k, projected_sol_mask_d[col_indices],projected_sol_mask_v[col_indices],data, train_mask_t)
-#                 else:
-#                     res = residual_func(i,j,k, projected_sol_mask_d[col_indices],projected_sol_mask_v[col_indices],data, train_mask_t)
-
-#                 Ce = np.dot( np.transpose(V_mask_[col_indices]), res )
-#                 C[(i+NL_solutions.shape[1]*k) * n_sel : (i+NL_solutions.shape[1]*k + 1) * n_sel, j] = Ce
-
-
-#     d_vec = C @ np.ones((ncells, 1))
-#     norm_d_vec = np.linalg.norm(d_vec)
-#     print(f"norm of rhs: {norm_d_vec}")
-
-
-#     if tol is None:
-#         x, residual = nnls(C, d_vec.flatten(), maxiter=1e6)
-#     else:
-#         x, residual = nnls_sp(C, d_vec.flatten(), atol=tol, maxiter=1e6)
-
-#     return x, residual/norm_d_vec
-
-
+    # Return the ECM weights, the selected indices, and the singular values from the SVD.
+    return W, Z, S
