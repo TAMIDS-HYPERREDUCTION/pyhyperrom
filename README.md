@@ -76,7 +76,9 @@ README.md                             # Project documentation
 
 ## Additional Notes
 
-While this repository is not optimized for maximal efficiency, it is designed with a teaching and tutorial perspective in mind. The entire code structure remains simple and accessible, allowing researchers to follow the implementation easily and adapt it to their own codebases. This repository serves as a practical starting point for those looking to integrate hyper-reduction techniques into their computational workflows.
+- While this repository is not optimized for maximal efficiency, it is designed with a teaching and tutorial perspective in mind. The entire code structure remains simple and accessible, allowing researchers to follow the implementation easily and adapt it to their own codebases. This repository serves as a practical starting point for those looking to integrate hyper-reduction techniques into their computational workflows.
+
+- Visualizations in the jupyter notebooks require sci_mplstyle_package, which is available in the **Resources** folder.
 
 ## Contributors
 See the `contributors.md` file for a list of contributors.
