@@ -21,21 +21,37 @@ To set up the environment, use the provided `requirements.txt`:
 pip install -r requirements.txt
 ```
 
-## Usage
+## Example Usage
+Navigate to:
 
-Example:
-
-Run the example scripts for 1D heat conduction models:
-
-```bash
-python pyHyperRom/examples/heat_conduction/OneD_heat_conduction/FEM_1D_data_gen_paper.py
+```
+examples → heat_conduction → OneD_heat_conduction → 1_ROM_Speedup_L_vs_NL_No_hyperreduction
 ```
 
-Jupyter notebooks for hyperreduction methods can be found in:
+The problem statements are available in the PDF. Then, use the linear and non-linear Jupyter notebooks to generate data using the linear and the nonlinear *Finite Element Models* respectively. While generating data for the linear FE model, make sure to uncomment the portion which corresponds to linear material property in the file:
 
-```bash
-pyHyperRom/examples/heat_conduction/OneD_heat_conduction/
 ```
+examples → heat_conduction → OneD_heat_conduction → FEM_1D_system_properties
+```
+since by default the nonlinear material properties are used.
+
+
+Once data generation is complete, proceed to:
+
+```
+examples → heat_conduction → OneD_heat_conduction → 2_Approximate_then_Project_Hyperreduction
+```
+
+In this folder, apply **DEIM** or **SOPT** to perform hyperreduction.
+
+Alternatively, navigate to:
+
+```
+examples → heat_conduction → OneD_heat_conduction → 3_Project_then_Approximate_Hyperreduction
+```
+
+Here, use **ECM** or **ECSW** for hyperreduction.
+
 
 ## Directory Structure
 ```
