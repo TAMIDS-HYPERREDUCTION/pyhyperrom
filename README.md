@@ -22,35 +22,41 @@ pip install -r requirements.txt
 ```
 
 ## Example Usage
-Navigate to:
 
-```
-examples → heat_conduction → OneD_heat_conduction → 1_ROM_Speedup_L_vs_NL_No_hyperreduction
-```
+#### **Step 1: Understand the Problem Statement**
+- Navigate to:
+  ```
+  examples → heat_conduction → OneD_heat_conduction → 1_ROM_Speedup_L_vs_NL_No_hyperreduction
+  ```
+- Open the **PDF file** containing the problem statements and review the details.
 
-The problem statements are available in the PDF. Then, use the linear and non-linear Jupyter notebooks to generate data using the linear and the nonlinear *Finite Element Models* respectively. While generating data for the linear FE model, make sure to uncomment the portion which corresponds to linear material property in the file:
+---
 
-```
-examples → heat_conduction → OneD_heat_conduction → FEM_1D_system_properties
-```
-since by default the nonlinear material properties are used.
+#### **Step 2: Generate Data Using the Linear and Nonlinear Finite Element Models**
+- Use the **Jupyter notebooks** for both **linear** and **nonlinear** FE models to generate data.
+- While running the linear FE model, ensure that:
+  - You **uncomment** the portion corresponding to the **linear material property** in:
+    ```
+    examples → heat_conduction → OneD_heat_conduction → FEM_1D_system_properties
+    ```
+  - By default, the file uses **nonlinear material properties**, so this step is necessary.
 
+---
 
-Once data generation is complete, proceed to:
+#### **Step 3: Perform Hyperreduction Using Either of Two Approaches**
+##### **Option A: Approximate Then Project**
+- Navigate to:
+  ```
+  examples → heat_conduction → OneD_heat_conduction → 2_Approximate_then_Project_Hyperreduction
+  ```
+- Apply **DEIM** or **SOPT** for hyperreduction.
 
-```
-examples → heat_conduction → OneD_heat_conduction → 2_Approximate_then_Project_Hyperreduction
-```
-
-In this folder, apply **DEIM** or **SOPT** to perform hyperreduction.
-
-Alternatively, navigate to:
-
-```
-examples → heat_conduction → OneD_heat_conduction → 3_Project_then_Approximate_Hyperreduction
-```
-
-Here, use **ECM** or **ECSW** for hyperreduction.
+##### **Option B: Project Then Approximate**
+- Navigate to:
+  ```
+  examples → heat_conduction → OneD_heat_conduction → 3_Project_then_Approximate_Hyperreduction
+  ```
+- Use **ECM** or **ECSW** for hyperreduction.
 
 
 ## Directory Structure
