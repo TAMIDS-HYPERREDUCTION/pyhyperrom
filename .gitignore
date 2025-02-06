@@ -8,10 +8,11 @@ pyHyperRom/examples/heat_conduction/ThreeD_heat_conduction_
 pyHyperRom/examples/structural_mechanics
 pyHyperRom/src/codes/algorithms/test/*
 pyHyperRom/src/codes/prob_classes/heat_conduction/old
-pyHyperRom/src/codes/prob_classes/structural_mechanics
+pyHyperRom/src/codes/prob_classes/structural_mechanics_
 pyHyperRom/src/codes/reductor/Struc_Mech/*
 pyHyperRom/src/codes/reductor/old/*
 pyHyperRom/src/codes/utils/non_HC/*
 pyHyperRom/src/codes/utils/old/*
 pyHyperRom/tests_
 pyHyperRom/misc
+
