@@ -1,6 +1,6 @@
 # pyHyperRom
 
-![alt text](image.png)
+![alt text](image-1.png)
 
 ## Overview
 pyHyperRom is a Python-based framework for reduced-order modeling (ROM) and hyperreduction methods applied to computational mechanics and heat conduction problems. 
