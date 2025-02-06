@@ -40,16 +40,21 @@ pyHyperRom/examples/heat_conduction/OneD_heat_conduction/
 ## Directory Structure
 ```
 pyHyperRom/
-│── docs/                           # Documentation and presentations
+│── Resources/                           # Documentation and presentations
 │── examples/                       # Example problems and notebooks
 │── src/codes/                       # Core source code
 │   ├── algorithms/                  # Hyperreduction algorithms
 │   ├── prob_classes/                # Problem class definitions
 │   ├── reductor/                    # Model reduction implementations
 │   ├── utils/                        # Utility functions
-│── requirements.txt                 # Dependencies
-│── README.md                        # Project documentation
+requirements.txt                      # Dependencies
+contributors.md                       # Contributors informaion
+README.md                             # Project documentation
 ```
+
+## Additional Notes
+
+While this repository is not optimized for maximal efficiency, it is designed with a teaching and tutorial perspective in mind. The entire code structure remains simple and accessible, allowing researchers to follow the implementation easily and adapt it to their own codebases. This repository serves as a practical starting point for those looking to integrate hyper-reduction techniques into their computational workflows.
 
 ## Contributors
 See the `contributors.md` file for a list of contributors.
